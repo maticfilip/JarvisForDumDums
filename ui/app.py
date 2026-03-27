@@ -1,38 +1,59 @@
 import customtkinter as ctk
 from datetime import datetime
 
-from journal import JournalPage
-from dashboard import DashboardPage
+from ui.journal import JournalPage
+from ui.dashboard import DashboardPage
+from ui.habits import HabitsPage
+from ui.weekly_review import WeeklyReviewPage
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 #.........sidebar............#
 
-class NavButton(ctk.CTkButton):
+class NavButton(ctk.CTkFrame):
     def __init__(self, master, text, command, **kwargs):
         super().__init__(
             master,
+            height=36,
+            fg_color="transparent",
+            **kwargs,
+        )
+        self.grid_propagate(False)
+        self.command=command
+        
+        self.accent=ctk.CTkFrame(self, width=3, height=36, corner_radius=0)
+        self.accent.pack(side="left",fill="y")
+
+        self.btn=ctk.CTkButton(
+            self,
             text=text,
             command=command,
             anchor="w",
             fg_color="transparent",
-            text_color=("gray60","gray60"),
+            text_color=("gray50","gray50"),
             hover_color=("gray85","gray25"),
-            corner_radius=6,
-            height=36,
-            **kwargs,
+            corner_radius=0,
+            height=36
         )
+
+        self.btn.pack(side="left",fill="both", expand=True)
+        self.set_active(False)
+
 
     def set_active(self, active:bool):
         if active:
-            self.configure(
-                fg_color=("gray80","gray20"),
+            self.accent.configure(fg_color="#534AB7")
+            self.configure(fg_color="gray25")
+            self.btn.configure(
+                fg_color=("gray80","gray25"),
                 text_color=("gray10","white"),
                 font=ctk.CTkFont(weight="bold")
             )
         else:
-            self.configure(
+            self.accent.configure(fg_color="transparent")
+            self.configure(fg_color="transparent")
+            self.btn.configure(
                 fg_color="transparent",
                 text_color=("gray60","gray60"),
                 font=ctk.CTkFont(weight="normal")
@@ -55,7 +76,7 @@ class App(ctk.CTk):
 
 
     def build_sidebar(self):
-        self.sidebar=ctk.CTkFrame(self, width=180, corner_radius=0)
+        self.sidebar=ctk.CTkFrame(self, width=180, corner_radius=0, fg_color=("gray88","gray16"))
         self.sidebar.grid(row=0, column=0, sticky="nsew")
         self.sidebar.grid_propagate(False)
 
@@ -116,6 +137,8 @@ class App(ctk.CTk):
         self.pages:dict[str,ctk.CTkFrame]={
             "dashboard":DashboardPage(self.content_area),
             "journal":JournalPage(self.content_area),
+            "habits":HabitsPage(self.content_area),
+            "review":WeeklyReviewPage(self.content_area)
         }
         for page in self.pages.values():
             page.grid(row=0, column=0, sticky="nsew")
@@ -126,8 +149,8 @@ class App(ctk.CTk):
         titles={
             "dashboard":"Dashboard",
             "journal":"Journal",
-            # "habits":"Habits",
-            # "review":"Weekly Review"
+            "habits":"Habits",
+            "review":"Weekly Review"
         }
 
         self.page_title_label.configure(text=titles.get(key,key.title()))
@@ -138,6 +161,3 @@ class App(ctk.CTk):
         self.pages[key].tkraise()
 
 
-if __name__=="__main__":
-    app=App()
-    app.mainloop()
