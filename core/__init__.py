@@ -1,1 +1,1 @@
-from core.habits import add_habit, get_habits
+from core.habits import add_habit, get_habits, delete_habit

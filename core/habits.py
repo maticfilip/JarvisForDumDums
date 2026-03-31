@@ -30,3 +30,8 @@ def add_habit(name):
 
 def get_habits():
     return load()
+
+def delete_habit(name):
+    habits=load()
+    habits=[h for h in habits if h["name"]!=name]
+    save(habits)
