@@ -1,4 +1,6 @@
 import customtkinter as ctk
+from core.habits import get_habits,get_last_7_days
+from datetime import date
 
 class DashboardPage(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
@@ -97,9 +99,16 @@ class DashboardPage(ctk.CTkFrame):
             text_color="gray60"
         ).pack(anchor="w", padx=14, pady=(12,6))
 
-        habits=[
-            ("Langchain Study", [True,True,True,True,True,True,False], True),
-        ]
+        today=str(date.today())
+        raw_habits=get_habits()
+        habits=[]
+        for h in raw_habits:
+            name=h["name"]
+            history=h["history"]
+            history_bools=get_last_7_days(h)
+            history_bools=history_bools[:7]
+            done_today=today in h["history"]
+            habits.append((name, history_bools, done_today))
 
         for name, history, done_today in habits:
             row=ctk.CTkFrame(todays_habits, fg_color="gray17", corner_radius=8)

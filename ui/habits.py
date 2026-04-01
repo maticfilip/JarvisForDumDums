@@ -1,5 +1,6 @@
 import customtkinter as ctk
-from core import add_habit, get_habits, delete_habit
+from core import add_habit, get_habits, delete_habit, mark_habit_done, unmark_habit_done
+from datetime import date
 
 class HabitsPage(ctk.CTkFrame):
     def __init__(self, master, **kwargs):
@@ -36,6 +37,8 @@ class HabitsPage(ctk.CTkFrame):
         #----------------------#
 
     def build_habit_list(self):
+        today=str(date.today())
+
         for row in getattr(self, "habit_rows",[]):
             row.destroy()
         self.habit_rows=[]
@@ -45,6 +48,7 @@ class HabitsPage(ctk.CTkFrame):
         for habit in habits:
             name = habit['name']
             created = habit['created']
+            done_today=today in habit["history"]
             done = len(habit['history']) > 0  
             row=ctk.CTkFrame(self)
             row.pack(fill="x", pady=(0,8))
@@ -56,8 +60,17 @@ class HabitsPage(ctk.CTkFrame):
                 row, text="Delete", fg_color="transparent",border_width=1, text_color="gray60",hover_color="gray25",command=lambda n=name: self.remove_habit(n)
             ).pack(side="right",padx=(0,4), pady=8)
 
-            check=ctk.CTkCheckBox(row, text="Mark as done for today", width=24)
-            if done:
+            def on_check(n=name, var=ctk.IntVar()):
+                if var.get()==1:
+                    mark_habit_done(n)
+                else:
+                    unmark_habit_done(n)
+                return var
+
+            check_var=ctk.IntVar(value=1 if done_today else 0)
+
+            check=ctk.CTkCheckBox(row, text="Mark as done for today", width=24, variable=check_var, command=lambda n=name, v=check_var: mark_habit_done(n) if v.get()==1 else unmark_habit_done(n))
+            if done_today:
                 check.select()
             check.pack(side="right", padx=14)
             self.habit_rows.append(row)
