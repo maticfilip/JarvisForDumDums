@@ -1,0 +1,54 @@
+import json
+import os
+from datetime import datetime, date
+
+KATA_FILE="data/kata_log.json"
+
+DIFFICULTIES=["8kyu","7kyu","6kyu","5kyu","4kyu","3kyu","2kyu","1kyu"]
+STATUSES=["Solved","Struggled","Gave up","Learning"]
+
+def load():
+    if not os.path.exists(KATA_FILE):
+        return []
+    with open(KATA_FILE, "r") as f:
+        content=f.read().strip()
+        if not content:
+            return []
+        return json.loads(content)
+    
+def save(entries):
+    os.makedirs("data",exist_ok=True)
+    with open(KATA_FILE, "w") as f:
+        json.dump(entries, f, indent=2)
+
+def add_entry(kata_name, difficulty,status,notes):
+    entries=load()
+    entries.append({
+        "id":datetime.now().strftime("%Y%m%d-%H%M%S"),
+        "timestamp":datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "kata_name":kata_name,
+        "difficulty":difficulty,
+        "status":status,
+        "notes":notes
+    })
+    save(entries)
+
+def get_entries():
+    return list(reversed(load()))
+
+def search_entries(query):
+    query=query.lower()
+    return [
+        e for e in get_entries()
+        if query in e["kata_name"].lower() or query in e["notes"].lower()
+    ]
+
+def group_by_day(entries):
+    groups={}
+    for entry in entries:
+        day=entry["timestamp"][:10]
+        if day not in groups:
+            groups[day]=[]
+        groups[day].append(entry)
+    return groups
+

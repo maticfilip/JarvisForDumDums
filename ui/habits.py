@@ -8,7 +8,7 @@ class HabitsPage(ctk.CTkFrame):
         self.build_habit_list()
 
         ctk.CTkLabel(
-            self, text="TODAY'S HABITS", font=ctk.CTkFont(size=11), text_color="gray60").pack(anchor="w", pady=(0,10))
+            self, text="TODAY'S KATA", font=ctk.CTkFont(size=11), text_color="gray60").pack(anchor="w", pady=(0,10))
         
         #---------------------#
         
@@ -18,7 +18,7 @@ class HabitsPage(ctk.CTkFrame):
         add_card.pack(fill="x", pady=(0,16))
 
         ctk.CTkLabel(
-            add_card, text="Here you can add a new habit that you want to implement in your daily life.",
+            add_card, text="Here you can describe your most recent Taka. Include the name, difficulty level (in kyu), what you used and notes.",
             font=ctk.CTkFont(size=11, weight="bold"),
             text_color="white"
         ).pack(anchor="w",padx=14, pady=(12,6))

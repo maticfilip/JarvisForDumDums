@@ -1,7 +1,7 @@
 import customtkinter as ctk
 from datetime import datetime
 
-from ui.journal import JournalPage
+from ui.kata_log import KataLogPage
 from ui.dashboard import DashboardPage
 from ui.habits import HabitsPage
 from ui.weekly_review import WeeklyReviewPage
@@ -64,7 +64,7 @@ class App(ctk.CTk):
         super().__init__()
         self.geometry("960x620")
         self.minsize(800,500)
-        self.title("Helper for stupid developers like me")
+        self.title("Codewars journal and assistant")
 
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
@@ -136,7 +136,7 @@ class App(ctk.CTk):
 
         self.pages:dict[str,ctk.CTkFrame]={
             "dashboard":DashboardPage(self.content_area),
-            "journal":JournalPage(self.content_area),
+            "journal":KataLogPage(self.content_area),
             "habits":HabitsPage(self.content_area),
             "review":WeeklyReviewPage(self.content_area)
         }
