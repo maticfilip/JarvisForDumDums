@@ -326,7 +326,7 @@ class KataLogPage(ctk.CTkFrame):
         from core.llm import explain_topic
 
         def handle_result(result: dict):
-            self.after(0, lambda: self.on_explanation_ready(kata_name, result))
+            self.after(0, lambda: self._on_explanation_ready(kata_name, result))
 
         def handle_error(msg: str):
             self.after(0, lambda: self.ai_status_label.configure(
@@ -342,18 +342,37 @@ class KataLogPage(ctk.CTkFrame):
             on_error=handle_error
         )
 
-    def on_explanation_ready(self, kata_name, result):
-        self._pending_theory={
-            "topic":result.get("topic", kata_name),
-            "category":result.get("category","Other"),
-            "explanation":result.get("explanation",""),
-            "related_kata":kata_name,
-            "related_kata_id":""
-        }
-        self.ai_status_label.configure(
-            text=f"Explained '{self._pending_theory['topic']}'-ready to save.",
-            text_color="#1D9E75"
-        )
+    def _on_explanation_ready(self, kata_name: str, result: dict):
+        from core.theory import get_topic_by_category
+
+        category = result.get("category", "Other")
+        existing = get_topic_by_category(category)
+
+        if existing:
+            self._pending_theory = {
+                "topic": result.get("topic", kata_name),
+                "category": category,
+                "explanation": result.get("explanation", ""),
+                "related_kata": kata_name,
+                "existing_topic": existing[0],  
+                "mode": "append"               
+            }
+            self.ai_status_label.configure(
+                text=f"Related topic found: '{existing[0]['topic']}'. Save to add or create new entry.",
+                text_color="#EF9F27"
+            )
+        else:
+            self._pending_theory = {
+                "topic": result.get("topic", kata_name),
+                "category": category,
+                "explanation": result.get("explanation", ""),
+                "related_kata": kata_name,
+                "mode": "new"
+            }
+            self.ai_status_label.configure(
+                text=f"Explained '{result.get('topic', kata_name)}' — ready to save.",
+                text_color="#1D9E75"
+            )
 
     def _save_to_theory(self):
         if not self._pending_theory:
@@ -361,21 +380,123 @@ class KataLogPage(ctk.CTkFrame):
                 text="Click 'Explain this topic' first.", text_color="#E24B4A"
             )
             return
+
+        mode = self._pending_theory.get("mode", "new")
+
+        if mode == "append":
+            self._show_save_choice()
+        else:
+            self._do_save_new()
+
+    def _show_save_choice(self):
+        existing = self._pending_theory["existing_topic"]
+        root = self.winfo_toplevel()
+
+        dialog = ctk.CTkToplevel(root)
+        dialog.title("Related topic found")
+        dialog.geometry("380x200")
+        dialog.resizable(False, False)
+        dialog.grab_set()
+
+        dialog.update_idletasks()
+        x = root.winfo_x() + (root.winfo_width() // 2) - 190
+        y = root.winfo_y() + (root.winfo_height() // 2) - 100
+        dialog.geometry(f"+{x}+{y}")
+
+        ctk.CTkLabel(
+            dialog,
+            text=f"You already have notes on\n\"{existing['topic']}\"",
+            font=ctk.CTkFont(size=13, weight="bold"),
+            justify="center"
+        ).pack(pady=(20, 6))
+
+        ctk.CTkLabel(
+            dialog,
+            text="Add only the new information to it, or create a separate entry?",
+            font=ctk.CTkFont(size=12), text_color="gray50",
+            justify="center"
+        ).pack(pady=(0, 16))
+
+        btn_row = ctk.CTkFrame(dialog, fg_color="transparent")
+        btn_row.pack()
+
+        def on_append():
+            dialog.destroy()
+            self._do_append_to_existing()
+
+        def on_new():
+            dialog.destroy()
+            self._do_save_new()
+
+        ctk.CTkButton(
+            btn_row, text="Add to existing",
+            width=130, height=34,
+            fg_color="#534AB7", hover_color="#3C3489",
+            command=on_append
+        ).pack(side="left", padx=(0, 8))
+
+        ctk.CTkButton(
+            btn_row, text="New entry",
+            width=110, height=34,
+            fg_color="transparent", border_width=1,
+            text_color="gray60", border_color="gray30",
+            command=on_new
+        ).pack(side="left")
+
+    def _do_save_new(self):
         from core.theory import add_topic
         add_topic(
             topic=self._pending_theory["topic"],
             category=self._pending_theory["category"],
             explanation=self._pending_theory["explanation"],
             related_kata=self._pending_theory.get("related_kata", ""),
-            related_kata_id=self._pending_theory.get("related_kata_id", ""),
         )
         self._pending_theory = None
-        self.ai_status_label.configure(
-            text="Saved to Theory!", text_color="#1D9E75"
-        )
-
+        self.ai_status_label.configure(text="Saved as new topic!", text_color="#1D9E75")
         if self.app and "theory" in self.app.pages:
             self.app.pages["theory"].refresh()
+
+    def _do_append_to_existing(self):
+        from core.llm import explain_topic_delta
+        from core.theory import append_to_topic
+
+        existing = self._pending_theory["existing_topic"]
+        kata_name = self._pending_theory["related_kata"]
+
+        self.ai_status_label.configure(
+            text="Finding what's new...", text_color="gray50"
+        )
+
+        def handle_delta(text: str):
+            if text.strip() == "NOTHING_NEW":
+                self.after(0, lambda: self.ai_status_label.configure(
+                    text="Nothing new to add — already covered.", text_color="gray50"
+                ))
+                return
+
+            append_to_topic(existing["id"], kata_name, text)
+            self.after(0, lambda: self.ai_status_label.configure(
+                text="Added to existing topic!", text_color="#1D9E75"
+            ))
+            if self.app and "theory" in self.app.pages:
+                self.after(0, lambda: self.app.pages["theory"].refresh())
+
+        def handle_error(msg):
+            self.after(0, lambda: self.ai_status_label.configure(
+                text=f"Error: {msg}", text_color="#E24B4A"
+            ))
+
+        explain_topic_delta(
+            existing_topic=existing["topic"],
+            existing_explanation=existing["explanation"],
+            kata_name=kata_name,
+            difficulty=self._pending_theory.get("difficulty", ""),
+            description="",
+            code="",
+            on_complete=handle_delta,
+            on_error=handle_error
+        )
+        self._pending_theory = None
 
     def refresh(self):
         for widget in self.winfo_children():

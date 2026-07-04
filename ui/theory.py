@@ -262,28 +262,48 @@ class TheoryPage(ctk.CTkFrame):
                 self._toggle_expand(t, ef, exp)
         )
         expand_btn.pack(side="right")
+        expand_btn.configure(
+            command=lambda t=topic, ef=explanation_frame, exp=explanation:
+                self._toggle_expand(t, ef, exp)
+        )
 
         return card
 
 
-    def _render_explanation(self, parent: ctk.CTkFrame, explanation: str):
-        sections = explanation.split("##")
+    def _render_explanation(self, parent: ctk.CTkFrame, text:str):
+        explanation = text.get("explanation", "")
+        additions = text.get("additions", [])
+
+        self._render_sections(parent, explanation)
+
+        for addition in additions:
+            ctk.CTkFrame(
+                parent, height=1, fg_color="gray25"
+            ).pack(fill="x", pady=(12, 0))
+
+            ctk.CTkLabel(
+                parent,
+                text=f"↳ from kata: {addition['from_kata']}",
+                font=ctk.CTkFont(size=11), text_color="#534AB7"
+            ).pack(anchor="w", pady=(4, 0))
+
+            self._render_sections(parent, addition["text"])
+
+    def _render_sections(self, parent: ctk.CTkFrame, text: str):
+        sections = text.split("##")
         for section in sections:
             section = section.strip()
             if not section:
                 continue
-
             lines = section.split("\n", 1)
             header = lines[0].strip()
             body = lines[1].strip() if len(lines) > 1 else ""
-
             if header:
                 ctk.CTkLabel(
                     parent, text=header,
                     font=ctk.CTkFont(size=13, weight="bold"),
                     text_color="#AFA9EC", anchor="w"
                 ).pack(anchor="w", pady=(10, 2))
-
             if body:
                 ctk.CTkLabel(
                     parent, text=body,
@@ -295,7 +315,6 @@ class TheoryPage(ctk.CTkFrame):
     def _toggle_expand(self, topic, explanation_frame, full_explanation):
         if topic["id"] in self.expanded_cards:
             self.expanded_cards.remove(topic["id"])
-            # replace with preview
             for widget in explanation_frame.winfo_children():
                 widget.destroy()
             preview = full_explanation.replace("##", "").strip()
@@ -309,10 +328,17 @@ class TheoryPage(ctk.CTkFrame):
             self.expanded_cards.add(topic["id"])
             for widget in explanation_frame.winfo_children():
                 widget.destroy()
-            self._render_explanation(explanation_frame, full_explanation)
-
-        # update the button text
-        self._rebuild_feed(self._get_current_topics())
+            self._render_sections(explanation_frame, full_explanation)
+            for addition in topic.get("additions", []):
+                ctk.CTkFrame(
+                    explanation_frame, height=1, fg_color="gray25"
+                ).pack(fill="x", pady=(12, 0))
+                ctk.CTkLabel(
+                    explanation_frame,
+                    text=f"↳ from kata: {addition['from_kata']}",
+                    font=ctk.CTkFont(size=11), text_color="#534AB7"
+                ).pack(anchor="w", pady=(4, 0))
+                self._render_sections(explanation_frame, addition["text"])
 
     # ── Delete ────────────────────────────────────────────────────────────────
 

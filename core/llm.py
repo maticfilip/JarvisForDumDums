@@ -66,19 +66,44 @@ def generate(prompt:str, on_complete, on_error=None):
 
 
 def parse_json_response(raw:str):
-    match=re.search(r'\{.*\}', raw, re.DOTALL)
+    print(f"[DEBUG RAW LLM OUTPUT]\n{raw}\n")
+    
+    match = re.search(r'\{.*\}', raw, re.DOTALL)
     if not match:
-        return {"topic":"Unknown", "category":"Other", "explanation":raw}
+        return {"topic": "Unknown", "category": "Other", "explanation": raw}
+
     try:
-        data=json.loads(match.group())
-        valid_categories=[
-            "Algorithms","Data Structures","String Manipulation","Mathematics","Language Features","Other"
-        ]
-        if data.get("category") not in valid_categories:
-            data["category"]="Other"
+        pairs = []
+        decoder = json.JSONDecoder(object_pairs_hook=lambda p: p)
+        pairs = decoder.decode(match.group())
+        
+        data = {}
+        for key, value in pairs:
+            if key not in data:
+                data[key] = value
+
+        if data.get("category") not in VALID_CATEGORIES:
+            data["category"] = "Other"
+
+        topic_lower = data.get("topic", "").lower()
+        explanation_lower = data.get("explanation", "").lower()
+
+        keyword_map = {
+            "String Manipulation": ["string", "character", "regex", "text", "format", "camel", "split", "join"],
+            "Mathematics":         ["math", "prime", "fibonacci", "number theory", "arithmetic"],
+            "Data Structures":     ["tree", "graph", "linked list", "stack", "queue", "hash"],
+            "Language Features":   ["comprehension", "generator", "decorator", "lambda", "built-in"],
+        }
+
+        for category, keywords in keyword_map.items():
+            if any(kw in topic_lower for kw in keywords):
+                data["category"] = category
+                break
+
         return data
-    except json.JSONDecodeError:
-        return {"topic":"Unknown","category":"Other","explanation":raw}
+
+    except (json.JSONDecodeError, ValueError):
+        return {"topic": "Unknown", "category": "Other", "explanation": raw}
 
 
 def explain_topic(kata_name, difficulty, description, code, on_complete, on_error=None):
@@ -91,40 +116,69 @@ Description: {description}
 Their solution:
 {code}
 
-Use this kata only as context to identify the underlying topic. Then write a general, reusable explanation of that topic — not about this specific kata.
+Use this kata only as context to identify the underlying topic. Then write a general, reusable explanation of that topic.
 
-Structure your explanation exactly like this, using these exact section headers:
+Structure your explanation with these exact section headers:
 
 ## What is it?
-Define the concept clearly from first principles. Assume the student has a basic programming background but has never studied this topic formally.
-
 ## How does it work?
-Explain the mechanics and intuition. Use a simple analogy if it helps. Focus on the "why" not just the "what".
-
 ## Common use cases
-Describe 2-3 real-world situations where this concept is commonly applied. Be concrete and practical.
-
 ## Common mistakes
-What do beginners typically get wrong with this concept? What edge cases trip people up?
-
 ## How it appears in your solution
-Briefly connect the theory back to the student's specific code. Point out exactly where and how the concept is used.
 
-Write each section in 2-4 sentences minimum. Use plain prose within each section — no nested bullet points. Keep it educational, clear, and encouraging.
+Write 2-4 sentences per section in plain prose.
 
-Then categorize the overall topic.
+IMPORTANT — Category selection rules:
+- If the topic involves strings, text, characters, formatting, regex → category MUST be "String Manipulation"
+- If the topic involves lists, trees, graphs, dictionaries, stacks → category MUST be "Data Structures"  
+- If the topic involves numbers, arithmetic, primes, geometry → category MUST be "Mathematics"
+- If the topic involves Python built-ins, comprehensions, generators → category MUST be "Language Features"
+- If the topic involves sorting, searching, recursion, dynamic programming → category MUST be "Algorithms"
+- Otherwise → "Other"
 
-Respond ONLY in this exact JSON format, no other text:
+Respond ONLY in this exact JSON format. Do not repeat any key. No text before or after:
 {{
   "topic": "short topic name, 2-4 words",
-  "category": "one of: Algorithms, Data Structures, String Manipulation, Mathematics, Language Features, Other",
-  "explanation": "your full explanation with ## headers included, sections separated by double newlines"
+  "category": "exactly one of the categories listed above",
+  "explanation": "your full explanation with ## headers, sections separated by double newlines"
 }}"""
 
     def handle_raw(raw: str):
         on_complete(parse_json_response(raw))
 
     generate(prompt, on_complete=handle_raw, on_error=on_error)
+
+def explain_topic_delta(existing_topic, existing_explanation, 
+                        kata_name, difficulty, description, 
+                        code, on_complete, on_error=None):
+    prompt = f"""You are a coding mentor maintaining a student's personal knowledge base.
+
+The student already has these notes on "{existing_topic}":
+
+---
+{existing_explanation}
+---
+
+They just solved a new kata that touches the same topic:
+
+Kata: {kata_name} ({difficulty})
+Description: {description}
+Their solution:
+{code}
+
+Your job is to identify what this new kata teaches that is NOT already covered in the existing notes above.
+
+Write ONLY the new information — do not repeat or summarise anything already written.
+If the existing notes already cover everything this kata demonstrates, respond with exactly: "NOTHING_NEW"
+
+Format your addition with a section header like:
+## From: {kata_name}
+Then 2-3 sentences of genuinely new insight.
+
+Respond with just the new text, no JSON, no preamble."""
+
+    generate(prompt, on_complete=on_complete, on_error=on_error)
+
 
 def get_code_feedback(kata_name, difficulty, code, on_complete, on_error=None):
     prompt=f"""You are a coding mentor reviewing a CodeWars solution.

@@ -71,3 +71,23 @@ def search_topics(query):
         t for t in get_topics()
         if query in t["topic"].lower() or query in t["explanation"].lower()
     ]
+
+def get_topic_by_category(category: str) -> list:
+    return [t for t in load() if t["category"] == category]
+
+def append_to_topic(topic_id: str, from_kata: str, new_text: str):
+    entries = load()
+    for entry in entries:
+        if entry["id"] == topic_id:
+            if "additions" not in entry:
+                entry["additions"] = []
+            if "related_kata" not in entry or not isinstance(entry["related_kata"], list):
+                entry["related_kata"] = [entry.get("related_kata", "")]
+
+            entry["additions"].append({
+                "from_kata": from_kata,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "text": new_text
+            })
+            entry["related_kata"].append(from_kata)
+    save(entries)
