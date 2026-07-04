@@ -84,10 +84,18 @@ def append_to_topic(topic_id: str, from_kata: str, new_text: str):
             if "related_kata" not in entry or not isinstance(entry["related_kata"], list):
                 entry["related_kata"] = [entry.get("related_kata", "")]
 
+            header = f"## From: {from_kata}"
+            if new_text.startswith(header):
+                body = new_text[len(header):].strip()
+            else:
+                body = new_text.strip()
+            clean_text = f"{header}\n{body}"
+
             entry["additions"].append({
                 "from_kata": from_kata,
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "text": new_text
+                "text": clean_text
             })
-            entry["related_kata"].append(from_kata)
+            if from_kata not in entry.get("related_kata", []):
+                entry["related_kata"].append(from_kata)
     save(entries)

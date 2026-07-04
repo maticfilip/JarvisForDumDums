@@ -1,35 +1,20 @@
 [
   {
-    "id": "20260702-114646",
-    "timestamp": "2026-07-02 11:46:46",
-    "topic": "String Manipulation",
-    "category": "Algorithms",
-    "explanation": "An isogram is a word that contains no repeating characters (letters). The solution converts the input string to lowercase and uses a set to eliminate duplicate characters, effectively checking for duplicates in the string. This approach leverages the properties of sets to efficiently track unique elements, making it a straightforward solution to the problem. The key concept is understanding how sets handle duplicates and how string manipulation can be used to analyze the uniqueness of characters.",
-    "related_kata": "Isograms",
-    "related_kata_id": ""
-  },
-  {
-    "id": "20260704-152303",
-    "timestamp": "2026-07-04 15:23:03",
-    "topic": "String Manipulation",
+    "id": "20260704-161412",
+    "timestamp": "2026-07-04 16:14:12",
+    "topic": "String Ends With",
     "category": "String Manipulation",
-    "explanation": "This Kata breaks up camel case by inserting a space between words. The solution iterates through each character in the input string, checks if it's uppercase, and appends a space if so. It's a simple yet effective way to normalize strings, useful in software engineering and data processing contexts. Common mistakes include not handling edge cases like empty strings or non-alphanumeric characters, which can lead to incorrect results.",
+    "explanation": "String ends with? is a common Kata in coding challenges that tests if a string starts with a specified substring. The solution checks if the provided text ends with the given ending by comparing the substring from the end of the text to the ending string. Common use cases include checking strings for prefixes, validating input, or validating file names. A common mistake is checking the wrong end, which can lead to incorrect results. This Kata focuses on string manipulation and is a fundamental part of programming challenges.",
     "related_kata": [
-      "Break camelCase",
       "String ends with?",
-      "String ends with?"
+      "Isograms"
     ],
     "related_kata_id": "",
     "additions": [
       {
-        "from_kata": "String ends with?",
-        "timestamp": "2026-07-04 15:46:48",
-        "text": "## From: String ends with? Check for the presence of '()' in the string. This is a new insight, as the existing notes only covered camel case normalization and handling edge cases, but this kata demonstrates a pattern check for specific string termination."
-      },
-      {
-        "from_kata": "String ends with?",
-        "timestamp": "2026-07-04 15:51:13",
-        "text": "## From: String ends with?\nThe new kata teaches the concept of validating string patterns, specifically checking if a string ends with a pair of parentheses. This is a different approach to string validation compared to the existing notes, which focus on normalizing camel case."
+        "from_kata": "Isograms",
+        "timestamp": "2026-07-04 16:15:19",
+        "text": "## From: Isograms\nThe new information is that the Isograms Kata focuses on validating a string by checking if all characters are unique, which is a distinct problem from checking for a prefix. This requires checking character uniqueness, which is not already covered in the existing notes."
       }
     ]
   }

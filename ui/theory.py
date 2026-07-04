@@ -7,6 +7,7 @@ from core.theory import (
 )
 from ui.components import confirm_delete
 
+
 CATEGORY_COLORS = {
     "Algorithms":          {"bg": "#2A2660", "fg": "#AFA9EC"},
     "Data Structures":     {"bg": "#0A2E22", "fg": "#5DCAA5"},
@@ -17,10 +18,26 @@ CATEGORY_COLORS = {
 }
 
 
+def _make_preview(explanation: str) -> str:
+    if "##" not in explanation:
+        return explanation[:220] + "..." if len(explanation) > 220 else explanation
+    
+    lines = explanation.split("\n")
+    body_lines = []
+    for line in lines:
+        stripped = line.strip()
+        if not stripped or stripped.startswith("##"):
+            continue
+        body_lines.append(stripped)
+
+    body = " ".join(body_lines)
+    return body[:220] + "..." if len(body) > 220 else body
+
+
 class TheoryPage(ctk.CTkFrame):
-    def __init__(self, master,app=None, **kwargs):
+    def __init__(self, master, app=None, **kwargs):
         super().__init__(master, fg_color="transparent", **kwargs)
-        self.app=app
+        self.app = app
 
         self.selected_category = None
         self.expanded_cards = set()
@@ -116,7 +133,6 @@ class TheoryPage(ctk.CTkFrame):
             width=24
         ).pack(side="right", padx=8)
 
-        # bind click on row and all children
         for widget in [row] + list(row.winfo_children()):
             widget.bind("<Button-1>", lambda e, c=category: self._select_category(c))
 
@@ -194,7 +210,7 @@ class TheoryPage(ctk.CTkFrame):
         inner = ctk.CTkFrame(card, fg_color="transparent")
         inner.pack(side="left", fill="both", expand=True, padx=12, pady=10)
 
-        # ── top row ───────────────────────────────────────────────────────────────
+        # ── top row ───────────────────────────────────────────────────────────
         top = ctk.CTkFrame(inner, fg_color="transparent")
         top.pack(fill="x")
 
@@ -226,30 +242,34 @@ class TheoryPage(ctk.CTkFrame):
             command=lambda t=topic: self._delete_topic(t)
         ).pack(side="right")
 
-        # ── explanation ───────────────────────────────────────────────────────────
+        # ── explanation ───────────────────────────────────────────────────────
         explanation_frame = ctk.CTkFrame(inner, fg_color="transparent")
         explanation_frame.pack(fill="x", pady=(8, 0))
 
         if is_expanded:
-            self._render_explanation(explanation_frame, explanation)
+            self._render_explanation(explanation_frame, topic)
         else:
-            # show plain preview without parsing sections
-            preview = explanation.replace("##", "").strip()
-            preview = preview[:200] + "..." if len(preview) > 200 else preview
+            preview = _make_preview(explanation)
             ctk.CTkLabel(
                 explanation_frame, text=preview,
                 font=ctk.CTkFont(size=13), text_color="gray70",
                 wraplength=440, justify="left", anchor="w"
             ).pack(anchor="w")
 
-        # ── footer ────────────────────────────────────────────────────────────────
+        # ── footer ────────────────────────────────────────────────────────────
         footer = ctk.CTkFrame(inner, fg_color="transparent")
         footer.pack(fill="x", pady=(8, 0))
 
-        if topic.get("related_kata"):
+        related = topic.get("related_kata", "")
+        if related:
+            if isinstance(related, list):
+                related_text = "  ·  ".join(related)
+            else:
+                related_text = related
             ctk.CTkLabel(
-                footer, text=f"↳  {topic['related_kata']}",
-                font=ctk.CTkFont(size=11), text_color="#534AB7"
+                footer, text=f"↳  {related_text}",
+                font=ctk.CTkFont(size=11), text_color="#534AB7",
+                wraplength=300, justify="left"
             ).pack(side="left")
 
         expand_btn = ctk.CTkButton(
@@ -262,21 +282,15 @@ class TheoryPage(ctk.CTkFrame):
                 self._toggle_expand(t, ef, exp)
         )
         expand_btn.pack(side="right")
-        expand_btn.configure(
-            command=lambda t=topic, ef=explanation_frame, exp=explanation:
-                self._toggle_expand(t, ef, exp)
-        )
 
         return card
 
+    # ── Render helpers ────────────────────────────────────────────────────────
 
-    def _render_explanation(self, parent: ctk.CTkFrame, text:str):
-        explanation = text.get("explanation", "")
-        additions = text.get("additions", [])
+    def _render_explanation(self, parent: ctk.CTkFrame, topic: dict):
+        self._render_sections(parent, topic.get("explanation", ""))
 
-        self._render_sections(parent, explanation)
-
-        for addition in additions:
+        for addition in topic.get("additions", []):
             ctk.CTkFrame(
                 parent, height=1, fg_color="gray25"
             ).pack(fill="x", pady=(12, 0))
@@ -298,6 +312,13 @@ class TheoryPage(ctk.CTkFrame):
             lines = section.split("\n", 1)
             header = lines[0].strip()
             body = lines[1].strip() if len(lines) > 1 else ""
+
+            if not body and len(header) > 60:
+                # split on first sentence end and treat rest as body
+                parts = header.split(". ", 1)
+                header = parts[0] + "." if len(parts) > 1 else header
+                body = parts[1] if len(parts) > 1 else ""
+
             if header:
                 ctk.CTkLabel(
                     parent, text=header,
@@ -310,15 +331,15 @@ class TheoryPage(ctk.CTkFrame):
                     font=ctk.CTkFont(size=13), text_color="gray70",
                     wraplength=440, justify="left", anchor="w"
                 ).pack(anchor="w")
-
+                
+    # ── Expand / collapse ─────────────────────────────────────────────────────
 
     def _toggle_expand(self, topic, explanation_frame, full_explanation):
         if topic["id"] in self.expanded_cards:
             self.expanded_cards.remove(topic["id"])
             for widget in explanation_frame.winfo_children():
                 widget.destroy()
-            preview = full_explanation.replace("##", "").strip()
-            preview = preview[:200] + "..." if len(preview) > 200 else preview
+            preview = _make_preview(full_explanation)
             ctk.CTkLabel(
                 explanation_frame, text=preview,
                 font=ctk.CTkFont(size=13), text_color="gray70",
@@ -352,13 +373,13 @@ class TheoryPage(ctk.CTkFrame):
 
     def _do_delete(self, topic: dict):
         delete_topic(topic["id"])
-        self._all_cards = [
-            (t, c) for t, c in self._all_cards
-            if t["id"] != topic["id"]
-        ]
+        new_cards = []
         for t, c in self._all_cards:
             if t["id"] == topic["id"]:
                 c.destroy()
+            else:
+                new_cards.append((t, c))
+        self._all_cards = new_cards
         self._rebuild_sidebar()
         self._apply_filter(self.search_var.get().strip())
 
